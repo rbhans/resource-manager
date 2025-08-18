@@ -199,7 +199,7 @@
 
         .list-header {
             display: grid;
-            grid-template-columns: 48px 1fr 120px 200px 100px;
+            grid-template-columns: 48px 1fr 200px 100px;
             padding: 12px 16px;
             background: var(--ms-gray-10);
             border-bottom: 1px solid var(--ms-gray-30);
@@ -210,7 +210,7 @@
 
         .list-item {
             display: grid;
-            grid-template-columns: 48px 1fr 120px 200px 100px;
+            grid-template-columns: 48px 1fr 200px 100px;
             padding: 12px 16px;
             border-bottom: 1px solid var(--ms-gray-20);
             align-items: center;
@@ -239,11 +239,6 @@
         .item-title {
             font-weight: 400;
             color: var(--ms-gray-160);
-        }
-
-        .item-type {
-            color: var(--ms-gray-130);
-            font-size: 12px;
         }
 
         .item-tags {
@@ -341,12 +336,6 @@
             right: 0;
         }
 
-        .modal.wide {
-            width: 90%;
-            max-width: 1200px;
-            right: -100%;
-        }
-
         .modal-header {
             padding: 20px;
             border-bottom: 1px solid var(--ms-gray-30);
@@ -402,7 +391,7 @@
             font-weight: 600;
         }
 
-        .form-input, .form-select {
+        .form-input {
             width: 100%;
             padding: 6px 12px;
             border: 1px solid var(--ms-gray-40);
@@ -411,7 +400,7 @@
             height: 32px;
         }
 
-        .form-input:focus, .form-select:focus {
+        .form-input:focus {
             outline: none;
             border-color: var(--ms-primary);
         }
@@ -465,13 +454,6 @@
 
         .tag-list-item:last-child {
             border-bottom: none;
-        }
-
-        /* Viewer */
-        .viewer-frame {
-            width: 100%;
-            height: calc(100vh - 100px);
-            border: none;
         }
 
         /* Message */
@@ -540,11 +522,6 @@
         <div class="page-header">
             <h1 class="page-title">Training Resources</h1>
             <p class="page-subtitle">Centralized repository for training materials and documentation</p>
-            <div id="authWarning" style="margin-top: 15px; padding: 10px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; display: none;">
-                <strong>⚠️ First Time Setup:</strong> For embedded documents to work, please 
-                <a href="#" onclick="openSharePointAuth(); return false;" style="color: #0078d4;">sign into SharePoint</a> first.
-                <button onclick="dismissAuthWarning()" style="float: right; background: none; border: none; cursor: pointer;">✕</button>
-            </div>
         </div>
 
         <!-- Action Bar -->
@@ -581,7 +558,6 @@
             <div class="list-header">
                 <div>Type</div>
                 <div>Name</div>
-                <div>Type</div>
                 <div>Tags</div>
                 <div>Actions</div>
             </div>
@@ -591,8 +567,8 @@
         <!-- Empty State -->
         <div class="empty-state" id="emptyState" style="display: none;">
             <div class="empty-icon">📁</div>
-            <div class="empty-title">No documents yet</div>
-            <div class="empty-text">Create your first resource to get started</div>
+            <div class="empty-title">No resources yet</div>
+            <div class="empty-text">Add your first training resource to get started</div>
         </div>
     </div>
 
@@ -614,16 +590,12 @@
                 <input type="text" class="form-input" id="resourceTitle" placeholder="Enter resource title">
             </div>
             <div class="form-group">
-                <label class="form-label">Link Type</label>
-                <select class="form-select" id="linkType" onchange="updatePlaceholder()">
-                    <option value="embed">Embedded Document</option>
-                    <option value="share">External Link</option>
-                </select>
-            </div>
-            <div class="form-group">
                 <label class="form-label">SharePoint URL</label>
-                <input type="url" class="form-input" id="resourceLink" placeholder="Paste SharePoint URL or iframe code">
-                <div class="form-help">You can paste the entire iframe code or just the URL</div>
+                <input type="url" class="form-input" id="resourceLink" placeholder="Paste SharePoint link">
+                <div class="form-help">
+                    Paste any SharePoint link - document, page, or folder.<br>
+                    The resource will open in a new tab when clicked.
+                </div>
             </div>
             <div class="form-group">
                 <label class="form-label">Tags</label>
@@ -660,70 +632,18 @@
         </div>
     </div>
 
-    <!-- View Modal -->
-    <div id="viewModal" class="modal wide">
-        <div class="modal-header">
-            <div class="modal-title" id="viewTitle">Document Viewer</div>
-            <button class="modal-close" onclick="closeModal('viewModal')">✕</button>
-        </div>
-        <div class="modal-body" style="padding: 0; position: relative;">
-            <div id="embedError" style="display: none; padding: 40px; text-align: center; background: #fff3cd; color: #856404;">
-                <div style="font-size: 48px; margin-bottom: 20px;">⚠️</div>
-                <h3 style="margin-bottom: 10px;">Unable to Load Embedded Document</h3>
-                <p style="margin-bottom: 20px;">This might be due to SharePoint authentication requirements.</p>
-                <button class="btn btn-primary" onclick="openCurrentResourceExternal()">Open in SharePoint</button>
-                <button class="btn" onclick="closeModal('viewModal')">Close</button>
-            </div>
-            <iframe id="viewerFrame" class="viewer-frame" style="display: block;"></iframe>
-        </div>
-    </div>
-
     <script>
         // Data
         let resources = [];
-        let tags = ['Training', 'Documentation', 'Policy', 'Procedure', 'Tutorial', 'Reference'];
+        let tags = ['Training', 'Documentation', 'Policy', 'Procedure', 'Tutorial', 'Reference', 'Guidelines', 'Template'];
         let activeFilters = [];
-        let currentViewingResource = null;
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             loadData();
             renderResources();
             renderTagFilters();
-            checkSharePointAuth();
         });
-
-        // Check SharePoint authentication
-        function checkSharePointAuth() {
-            const dismissed = localStorage.getItem('authWarningDismissed');
-            const hasResources = resources.some(r => r.linkType === 'embed');
-            
-            if (!dismissed && hasResources) {
-                document.getElementById('authWarning').style.display = 'block';
-            }
-        }
-        
-        // Open SharePoint authentication
-        function openSharePointAuth() {
-            // Try to detect SharePoint URL from existing resources
-            const embedResource = resources.find(r => r.linkType === 'embed');
-            if (embedResource) {
-                const match = embedResource.link.match(/https:\/\/[^\/]+\.sharepoint\.com/);
-                if (match) {
-                    window.open(match[0], '_blank');
-                    showMessage('Please sign into SharePoint in the new tab, then return here', 'info');
-                    return;
-                }
-            }
-            // Fallback
-            showMessage('Please navigate to your SharePoint site and sign in', 'info');
-        }
-        
-        // Dismiss auth warning
-        function dismissAuthWarning() {
-            document.getElementById('authWarning').style.display = 'none';
-            localStorage.setItem('authWarningDismissed', 'true');
-        }
 
         // Show message
         function showMessage(text, type = 'info') {
@@ -783,22 +703,22 @@
             
             items.innerHTML = filtered.map(r => `
                 <div class="list-item">
-                    <div class="item-icon">${r.linkType === 'embed' ? '📄' : '🔗'}</div>
+                    <div class="item-icon">📄</div>
                     <div class="item-title">${r.title}</div>
-                    <div class="item-type">${r.linkType === 'embed' ? 'Embedded' : 'External'}</div>
                     <div class="item-tags">
                         ${r.tags.map(t => `<span class="item-tag">${t}</span>`).join('')}
                     </div>
                     <div class="item-actions">
-                        ${r.linkType === 'embed' 
-                            ? `<button class="icon-btn" onclick="viewResource(${resources.indexOf(r)})" title="View in App">👁️</button>
-                               <button class="icon-btn" onclick="window.open('${r.link}', '_blank')" title="Open in New Tab">↗️</button>`
-                            : `<button class="icon-btn" onclick="window.open('${r.link}', '_blank')" title="Open">↗️</button>`
-                        }
+                        <button class="icon-btn" onclick="openResource('${r.link}')" title="Open">↗️</button>
                         <button class="icon-btn" onclick="deleteResource(${resources.indexOf(r)})" title="Delete">🗑️</button>
                     </div>
                 </div>
             `).join('');
+        }
+
+        // Open resource
+        function openResource(link) {
+            window.open(link, '_blank');
         }
 
         // Render tag filters
@@ -840,36 +760,12 @@
         function closeModal(id) {
             document.getElementById('modalOverlay').classList.remove('active');
             document.getElementById(id).classList.remove('active');
-            if (id === 'viewModal') {
-                const iframe = document.getElementById('viewerFrame');
-                iframe.src = '';
-                // Clear any pending timeouts
-                if (iframe.dataset.timeoutId) {
-                    clearTimeout(parseInt(iframe.dataset.timeoutId));
-                    delete iframe.dataset.timeoutId;
-                }
-                currentViewingResource = null;
-                // Reset error display
-                document.getElementById('embedError').style.display = 'none';
-                document.getElementById('viewerFrame').style.display = 'block';
-            }
         }
 
         function closeModalOverlay(e) {
             if (e.target.id === 'modalOverlay') {
                 document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
                 document.getElementById('modalOverlay').classList.remove('active');
-                const iframe = document.getElementById('viewerFrame');
-                iframe.src = '';
-                // Clear any pending timeouts
-                if (iframe.dataset.timeoutId) {
-                    clearTimeout(parseInt(iframe.dataset.timeoutId));
-                    delete iframe.dataset.timeoutId;
-                }
-                currentViewingResource = null;
-                // Reset error display
-                document.getElementById('embedError').style.display = 'none';
-                document.getElementById('viewerFrame').style.display = 'block';
             }
         }
 
@@ -886,20 +782,10 @@
             event.target.classList.toggle('selected');
         }
 
-        // Update placeholder
-        function updatePlaceholder() {
-            const type = document.getElementById('linkType').value;
-            const input = document.getElementById('resourceLink');
-            input.placeholder = type === 'embed' 
-                ? 'Paste SharePoint embed URL or iframe code'
-                : 'Paste SharePoint sharing link';
-        }
-
         // Save resource
         function saveResource() {
             const title = document.getElementById('resourceTitle').value.trim();
             let link = document.getElementById('resourceLink').value.trim();
-            const linkType = document.getElementById('linkType').value;
             const selectedTags = Array.from(document.querySelectorAll('#tagSelector .tag-option.selected'))
                 .map(el => el.textContent);
             
@@ -908,14 +794,11 @@
                 return;
             }
             
-            // Extract URL from iframe
+            // Extract URL from iframe if user accidentally pastes iframe code
             if (link.includes('<iframe') && link.includes('src=')) {
                 const match = link.match(/src=["']([^"']+)["']/);
                 if (match && match[1]) {
                     link = match[1];
-                } else {
-                    showMessage('Could not extract URL from iframe code', 'error');
-                    return;
                 }
             }
             
@@ -931,7 +814,6 @@
                 id: Date.now(),
                 title,
                 link,
-                linkType,
                 tags: selectedTags,
                 createdAt: new Date().toISOString()
             });
@@ -944,66 +826,6 @@
             // Reset form
             document.getElementById('resourceTitle').value = '';
             document.getElementById('resourceLink').value = '';
-            document.getElementById('linkType').value = 'embed';
-        }
-
-        // View resource
-        function viewResource(index) {
-            const resource = resources[index];
-            currentViewingResource = resource;
-            
-            // Reset error display
-            document.getElementById('embedError').style.display = 'none';
-            document.getElementById('viewerFrame').style.display = 'block';
-            
-            // Show loading message
-            showMessage('Loading document...', 'info');
-            
-            // Set title
-            document.getElementById('viewTitle').textContent = resource.title;
-            
-            // Create iframe with error handling
-            const iframe = document.getElementById('viewerFrame');
-            
-            // Clear previous content
-            iframe.src = '';
-            
-            // Add timeout to detect loading issues
-            const loadTimeout = setTimeout(() => {
-                handleEmbedError();
-            }, 8000);
-            
-            // Store timeout ID
-            iframe.dataset.timeoutId = loadTimeout;
-            
-            // Add load success handler
-            iframe.onload = function() {
-                const timeoutId = iframe.dataset.timeoutId;
-                if (timeoutId) {
-                    clearTimeout(parseInt(timeoutId));
-                    delete iframe.dataset.timeoutId;
-                }
-            };
-            
-            // Try to load the document
-            iframe.src = resource.link;
-            document.getElementById('modalOverlay').classList.add('active');
-            document.getElementById('viewModal').classList.add('active');
-        }
-        
-        // Handle embed errors
-        function handleEmbedError() {
-            document.getElementById('embedError').style.display = 'block';
-            document.getElementById('viewerFrame').style.display = 'none';
-            showMessage('Cannot load embedded view. You may need to sign into SharePoint first.', 'error');
-        }
-        
-        // Open current resource externally
-        function openCurrentResourceExternal() {
-            if (currentViewingResource) {
-                window.open(currentViewingResource.link, '_blank');
-                closeModal('viewModal');
-            }
         }
 
         // Delete resource
@@ -1078,7 +900,7 @@
         // Export data
         function exportData() {
             const data = {
-                version: '1.0',
+                version: '2.0',
                 exportDate: new Date().toISOString(),
                 resources,
                 tags
@@ -1130,21 +952,26 @@
         function showHelp() {
             alert(`Training Resource Library - Help
             
-EMBEDDED DOCUMENTS:
-• For embedded docs to work, you must be signed into SharePoint
-• If a document won't load, click "Open in SharePoint" button
-• Use external links for documents that don't need preview
+HOW TO USE:
+1. Click "➕ New" to add a resource
+2. Enter a title and paste the SharePoint link
+3. Select relevant tags to organize
+4. Click on resources to open in SharePoint
 
 TIPS:
-• Sign into SharePoint before using the app
-• Keep SharePoint open in another tab
+• Use the search box to find resources quickly
+• Click tags to filter by category
 • Export your data regularly for backup
-• Use tags to organize resources
+• Import to restore or share collections
 
-TROUBLESHOOTING:
-• Clear browser cache if issues persist
-• Enable third-party cookies for SharePoint
-• Try using Microsoft Edge for best compatibility`);
+SHAREPOINT LINKS:
+• Use "Share" → "Copy link" in SharePoint
+• Any SharePoint URL works (documents, pages, folders)
+• Links open in new tabs for easy access
+
+KEYBOARD SHORTCUTS:
+• Escape - Close modals
+• Ctrl/Cmd + Click - Open multiple resources`);
         }
 
         // PWA
@@ -1159,8 +986,16 @@ TROUBLESHOOTING:
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
-            // Show install button if needed
             showMessage('This app can be installed for offline use!', 'info');
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal.active').forEach(modal => {
+                    closeModal(modal.id);
+                });
+            }
         });
     </script>
 </body>
